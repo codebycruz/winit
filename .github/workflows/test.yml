@@ -20,7 +20,7 @@ jobs:
 
             - name: Install Xvfb
               if: runner.os == 'Linux'
-              run: sudo apt-get update && sudo apt-get install -y xvfb
+              run: sudo apt-get update && sudo apt-get install -y xvfb x11-utils
 
             - name: Install dependencies
               run: lpm install
