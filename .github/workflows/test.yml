@@ -5,12 +5,16 @@ on:
         branches: [master]
     pull_request:
         branches: [master]
+    workflow_dispatch:
 
 jobs:
-    test-linux:
-        runs-on: ubuntu-latest
+    test:
+        strategy:
+            matrix:
+                os: [ubuntu-latest, windows-latest]
+        runs-on: ${{ matrix.os }}
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v6
             - uses: codebycruz/lpm@master
 
             - name: Install dependencies
