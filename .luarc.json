@@ -9,10 +9,20 @@
 			"duplicate": "Error",
 			"global": "Error"
 		},
+		"disable": [
+			"duplicate-doc-field",
+			"duplicate-doc-field",
+			"duplicate-index",
+			"duplicate-set-field",
+			"duplicate-doc-alias"
+		],
 		"unusedLocalExclude": ["_*"]
 	},
 	"runtime": {
 		"version": "LuaJIT",
-		"path": ["./lpm_modules/?.lua", "./lpm_modules/?/init.lua"]
+		"path": ["./target/?.lua", "./target/?/init.lua"]
+	},
+	"workspace": {
+		"library": ["target"]
 	}
 }

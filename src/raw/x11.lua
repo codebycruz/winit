@@ -2,7 +2,7 @@ local x11 = require("x11api")
 local ffi = require("ffi")
 
 ---@class winit.x11.Window: winit.Window
----@field display XDisplay
+---@field display x11.ffi.Display
 ---@field currentCursor number?
 local X11Window = {}
 X11Window.__index = X11Window
@@ -14,30 +14,30 @@ function X11Window.new(eventLoop, width, height)
 	local display = eventLoop.display
 
 	local root = x11.defaultRootWindow(display)
-	if root == x11.None then
+	if root == 0 then
 		x11.closeDisplay(display)
 		error("No root window found")
 	end
 
 	local id = x11.createSimpleWindow(display, root, 0, 0, width, height, 0, 0, 0x000000)
-	if id == x11.None then
+	if id == 0 then
 		x11.closeDisplay(display)
 		error("Failed to create window")
 	end
 
 	local window = setmetatable({ display = display, id = id, width = width, height = height }, X11Window)
 
-	x11.setWMProtocols(display, window, { "WM_DELETE_WINDOW" })
+	x11.setWMProtocols(display, window.id, { "WM_DELETE_WINDOW" })
 	x11.selectInput(
 		display,
 		window.id,
 		bit.bor(
-			x11.ExposureMask,
-			x11.StructureNotifyMask,
-			x11.SubstructureNotifyMask,
-			x11.ButtonPressMask,
-			x11.ButtonReleaseMask,
-			x11.PointerMotionMask
+			x11.EventMaskBits.Exposure,
+			x11.EventMaskBits.StructureNotify,
+			x11.EventMaskBits.SubstructureNotify,
+			x11.EventMaskBits.ButtonPress,
+			x11.EventMaskBits.ButtonRelease,
+			x11.EventMaskBits.PointerMotion
 		)
 	)
 	x11.mapWindow(display, window.id)
@@ -78,12 +78,13 @@ function X11Window:setIcon(image)
 		end
 	end
 
-	x11.changeProperty(self.display, self.id, "_NET_WM_ICON", "CARDINAL", 32, 0, ffi.cast("unsigned char*", iconData), iconSize)
+	x11.changeProperty(self.display, self.id, "_NET_WM_ICON", "CARDINAL", 32, 0, ffi.cast("unsigned char*", iconData),
+		iconSize)
 end
 
 local cursors = {
-	pointer = x11.XC_left_ptr,
-	hand2 = x11.XC_hand2,
+	pointer = x11.Icon.LeftPtr,
+	hand2 = x11.Icon.Hand2,
 }
 
 ---@param shape "pointer" | "hand2"
@@ -120,8 +121,8 @@ function X11Window:destroy()
 	x11.destroyWindow(self.display, self.id)
 end
 
----@class X11EventLoop: winit.EventLoop
----@field display XDisplay
+---@class winit.x11.EventLoop: winit.EventLoop
+---@field display x11.ffi.Display
 local X11EventLoop = {}
 X11EventLoop.__index = X11EventLoop
 
@@ -145,16 +146,17 @@ function X11EventLoop:close(window)
 	self.windows[tostring(window.id)] = nil
 end
 
----@param callback fun(event: winit.Event, handler: winit.EventHandler)
+---@param callback winit.EventHandler
 function X11EventLoop:run(callback)
 	local display = self.display
-	local event = x11.newEvent()
+	local event = x11.Event()
 
 	local wmDeleteWindow = x11.internAtom(display, "WM_DELETE_WINDOW", 0)
 
 	local isActive = true
 	local currentMode = "poll"
 
+	---@type winit.EventManager
 	local handler = {}
 	do
 		function handler:exit()
@@ -176,23 +178,23 @@ function X11EventLoop:run(callback)
 
 	---@type table<number, fun(window: winit.Window)>
 	local Handlers = {
-		[x11.MotionNotify] = function(window)
+		[x11.EventType.MotionNotify] = function(window)
 			callback({ window = window, name = "mouseMove", x = event.xmotion.x, y = event.xmotion.y }, handler)
 		end,
 
-		[x11.ClientMessage] = function(window)
+		[x11.EventType.ClientMessage] = function(window)
 			if event.xclient.data.l[0] == wmDeleteWindow then
 				callback({ window = window, name = "windowClose" }, handler)
 			end
 		end,
 
-		[x11.Expose] = function(window)
+		[x11.EventType.Expose] = function(window)
 			callback({ window = window, name = "redraw" }, handler)
 		end,
 
-		[x11.DestroyNotify] = function(window) end,
+		[x11.EventType.DestroyNotify] = function(window) end,
 
-		[x11.ConfigureNotify] = function(window)
+		[x11.EventType.ConfigureNotify] = function(window)
 			local newWidth = event.xconfigure.width
 			local newHeight = event.xconfigure.height
 
@@ -205,19 +207,19 @@ function X11EventLoop:run(callback)
 			end
 		end,
 
-		[x11.MapNotify] = function(window)
+		[x11.EventType.MapNotify] = function(window)
 			callback({ window = window, name = "map" }, handler)
 		end,
 
-		[x11.UnmapNotify] = function(window)
+		[x11.EventType.UnmapNotify] = function(window)
 			callback({ window = window, name = "unmap" }, handler)
 		end,
 
-		[x11.CreateNotify] = function(window)
+		[x11.EventType.CreateNotify] = function(window)
 			callback({ window = window, name = "create" }, handler)
 		end,
 
-		[x11.ButtonPress] = function(window)
+		[x11.EventType.ButtonPress] = function(window)
 			callback({
 				window = window,
 				name = "mousePress",
@@ -227,7 +229,7 @@ function X11EventLoop:run(callback)
 			}, handler)
 		end,
 
-		[x11.ButtonRelease] = function(window)
+		[x11.EventType.ButtonRelease] = function(window)
 			callback({
 				window = window,
 				name = "mouseRelease",
@@ -255,12 +257,12 @@ function X11EventLoop:run(callback)
 			return
 		end
 
-		local tempEvent = x11.newEvent()
+		local tempEvent = x11.Event()
 		local hasMoreMotion = true
 
 		while hasMoreMotion and x11.pending(display) > 0 do
 			x11.peekEvent(display, tempEvent)
-			if tempEvent.type == x11.MotionNotify and tempEvent.xmotion.window == event.xmotion.window then
+			if tempEvent.type == x11.EventType.MotionNotify and tempEvent.xmotion.window == event.xmotion.window then
 				x11.nextEvent(display, event)
 			else
 				hasMoreMotion = false
@@ -275,7 +277,7 @@ function X11EventLoop:run(callback)
 		if currentMode == "poll" then
 			if x11.pending(display) > 0 then
 				x11.nextEvent(display, event)
-				if event.type == x11.MotionNotify then
+				if event.type == x11.EventType.MotionNotify then
 					coalesceMouse()
 				end
 
@@ -283,7 +285,7 @@ function X11EventLoop:run(callback)
 			end
 		else
 			x11.nextEvent(display, event)
-			if event.type == x11.MotionNotify then
+			if event.type == x11.EventType.MotionNotify then
 				coalesceMouse()
 			end
 

@@ -22,10 +22,10 @@ local function check(name, condition, msg)
 end
 
 -- Test 1: Create an event loop and window
-local eventLoop = EventLoop.new()
+local eventLoop = EventLoop.new() ---@cast eventLoop winit.x11.EventLoop
 check("EventLoop.new", eventLoop ~= nil)
 
-local window = Window.new(eventLoop, 800, 600)
+local window = Window.new(eventLoop, 800, 600) ---@cast window winit.x11.Window
 check("Window.new", window ~= nil)
 check("Window.width", window.width == 800, "expected 800, got " .. tostring(window.width))
 check("Window.height", window.height == 600, "expected 600, got " .. tostring(window.height))
@@ -38,7 +38,7 @@ eventLoop:register(window)
 x11.flush(eventLoop.display)
 os.execute("sleep 0.1")
 
-local attrs = x11.getWindowAttributes(eventLoop.display, window)
+local attrs = x11.getWindowAttributes(eventLoop.display, window.id)
 check("getWindowAttributes", attrs ~= nil)
 if attrs then
 	check("attrs.width", attrs.width == 800, "expected 800, got " .. tostring(attrs.width))
@@ -113,13 +113,13 @@ end)
 check("received aboutToWait event", events["aboutToWait"] == true)
 
 -- Test 6: Create a second window and verify both work
-local eventLoop2 = EventLoop.new()
-local win2 = Window.fromEventLoop(eventLoop2)
+local eventLoop2 = EventLoop.new() ---@cast eventLoop2 winit.x11.EventLoop
+local win2 = Window.fromEventLoop(eventLoop2) ---@cast win2 winit.x11.Window
 check("Window.fromEventLoop", win2 ~= nil)
 check("fromEventLoop default width", win2.width == 1200, "expected 1200, got " .. tostring(win2.width))
 check("fromEventLoop default height", win2.height == 720, "expected 720, got " .. tostring(win2.height))
 
-local attrs2 = x11.getWindowAttributes(eventLoop2.display, win2)
+local attrs2 = x11.getWindowAttributes(eventLoop2.display, win2.id)
 check("second window attributes", attrs2 ~= nil)
 if attrs2 then
 	check("second window width", attrs2.width == 1200, "expected 1200, got " .. tostring(attrs2.width))

@@ -88,7 +88,7 @@ function Win32Window:destroy()
 	user32.destroyWindow(self.hwnd)
 end
 
----@class Win32EventLoop: winit.EventLoop
+---@class winit.win32.EventLoop: winit.EventLoop
 ---@field windows table<string, winit.win32.Window>
 ---@field class user32.WNDCLASSEXA
 ---@field isActive boolean
