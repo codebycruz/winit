@@ -24,6 +24,17 @@ function Window.fromEventLoop(eventLoop) ---@return winit.Window
 	return window
 end
 
+---@alias winit.KeyModifiers { shift: boolean, lock: boolean, ctrl: boolean, alt: boolean, super: boolean }
+
+---@alias winit.KeyName
+--- | "backspace" | "tab" | "return" | "escape"
+--- | "home" | "end" | "insert" | "delete" | "page-up" | "page-down"
+--- | "left" | "right" | "up" | "down"
+--- | "f1" | "f2" | "f3" | "f4" | "f5" | "f6" | "f7" | "f8" | "f9" | "f10" | "f11" | "f12"
+--- | "left-shift" | "right-shift" | "left-ctrl" | "right-ctrl"
+--- | "left-alt" | "right-alt" | "left-super" | "right-super" | "caps-lock"
+--- | string
+
 ---@alias winit.Event
 --- | { name: "aboutToWait" }
 --- | { window: winit.Window, name: "windowClose" }
@@ -35,6 +46,8 @@ end
 --- | { window: winit.Window, name: "mouseMove", x: number, y: number }
 --- | { window: winit.Window, name: "mousePress", x: number, y: number, button: number }
 --- | { window: winit.Window, name: "mouseRelease", x: number, y: number, button: number }
+--- | { window: winit.Window, name: "keyPress", key: winit.KeyName, modifiers: winit.KeyModifiers }
+--- | { window: winit.Window, name: "keyRelease", key: winit.KeyName, modifiers: winit.KeyModifiers }
 
 ---@alias winit.EventLoopMode "poll" | "wait"
 

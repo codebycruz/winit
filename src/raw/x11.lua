@@ -1,5 +1,4 @@
 local x11 = require("x11api")
-local ffi = require("ffi")
 
 ---@class winit.x11.Window: winit.Window
 ---@field display x11.ffi.Display
@@ -37,12 +36,72 @@ function X11Window.new(eventLoop, width, height)
 			x11.EventMaskBits.SubstructureNotify,
 			x11.EventMaskBits.ButtonPress,
 			x11.EventMaskBits.ButtonRelease,
-			x11.EventMaskBits.PointerMotion
+			x11.EventMaskBits.PointerMotion,
+			x11.EventMaskBits.KeyPress,
+			x11.EventMaskBits.KeyRelease
 		)
 	)
 	x11.mapWindow(display, window.id)
 
 	return window
+end
+
+local keysymNames = {
+	[0xff08] = "backspace",
+	[0xff09] = "tab",
+	[0xff0d] = "return",
+	[0xff1b] = "escape",
+	[0xff50] = "home",
+	[0xff51] = "left",
+	[0xff52] = "up",
+	[0xff53] = "right",
+	[0xff54] = "down",
+	[0xff55] = "page-up",
+	[0xff56] = "page-down",
+	[0xff57] = "end",
+	[0xff63] = "insert",
+	[0xffff] = "delete",
+	[0xffbe] = "f1",
+	[0xffbf] = "f2",
+	[0xffc0] = "f3",
+	[0xffc1] = "f4",
+	[0xffc2] = "f5",
+	[0xffc3] = "f6",
+	[0xffc4] = "f7",
+	[0xffc5] = "f8",
+	[0xffc6] = "f9",
+	[0xffc7] = "f10",
+	[0xffc8] = "f11",
+	[0xffc9] = "f12",
+	[0xffe1] = "left-shift",
+	[0xffe2] = "right-shift",
+	[0xffe3] = "left-ctrl",
+	[0xffe4] = "right-ctrl",
+	[0xffe9] = "left-alt",
+	[0xffea] = "right-alt",
+	[0xffeb] = "left-super",
+	[0xffec] = "right-super",
+	[0xffe5] = "caps-lock",
+}
+
+---@param keysym number
+---@param char string
+---@return winit.KeyName?
+local function keysymToKey(keysym, char)
+	local named = keysymNames[keysym]
+	if named then return named end
+	if #char > 0 then return char end
+	return nil
+end
+
+local function keyModifiers(state)
+	return {
+		shift = bit.band(state, 1) ~= 0,
+		lock  = bit.band(state, 2) ~= 0,
+		ctrl  = bit.band(state, 4) ~= 0,
+		alt   = bit.band(state, 8) ~= 0,
+		super = bit.band(state, 64) ~= 0,
+	}
 end
 
 local cursors = {
@@ -200,6 +259,32 @@ function X11EventLoop:run(callback)
 				y = event.xbutton.y,
 				button = event.xbutton.button,
 			}, handler)
+		end,
+
+		[x11.EventType.KeyPress] = function(window)
+			local char, keysym = x11.lookupString(event)
+			local key = keysymToKey(tonumber(keysym), char)
+			if key then
+				callback({
+					window = window,
+					name = "keyPress",
+					key = key,
+					modifiers = keyModifiers(event.xkey.state),
+				}, handler)
+			end
+		end,
+
+		[x11.EventType.KeyRelease] = function(window)
+			local char, keysym = x11.lookupString(event)
+			local key = keysymToKey(keysym, char)
+			if key then
+				callback({
+					window = window,
+					name = "keyRelease",
+					key = key,
+					modifiers = keyModifiers(event.xkey.state),
+				}, handler)
+			end
 		end,
 	}
 
