@@ -18,7 +18,7 @@ end
 local Win32Window = {}
 Win32Window.__index = Win32Window
 
----@param eventLoop Win32EventLoop
+---@param eventLoop winit.win32.EventLoop
 ---@param width number
 ---@param height number
 function Win32Window.new(eventLoop, width, height)

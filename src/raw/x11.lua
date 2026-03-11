@@ -7,7 +7,7 @@ local ffi = require("ffi")
 local X11Window = {}
 X11Window.__index = X11Window
 
----@param eventLoop X11EventLoop
+---@param eventLoop winit.x11.EventLoop
 ---@param width number
 ---@param height number
 function X11Window.new(eventLoop, width, height)
