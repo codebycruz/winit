@@ -2,6 +2,12 @@
 
 Window creation and handling library in pure LuaJIT.
 
+## Support
+
+| Arch        | Windows | Linux | macOS |
+| ----------- | ------- | ----- | ----- |
+| x86-64      | ✅      | ✅    | ❌    |
+
 ## Installation
 
 This is mainly intended to be consumed with the [lpm](https://github.com/codebycruz/lpm) package manager.
