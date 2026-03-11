@@ -5,6 +5,8 @@ local windowBackend =
 	or ffi.os == "Linux" and require("winit.raw.x11")
 	or error("Unsupported platform: " .. ffi.os)
 
+---@alias winit.CursorGrab "locked" | "none"
+
 ---@class winit.Window
 ---@field id any?
 ---@field width number
@@ -15,6 +17,7 @@ local windowBackend =
 ---@field setTitle fun(self: winit.Window, title: string)
 ---@field setCursor fun(self: winit.Window, shape: string)
 ---@field resetCursor fun(self: winit.Window)
+---@field setCursorGrab fun(self: winit.Window, mode: winit.CursorGrab)
 local Window = windowBackend.Window
 
 ---@param eventLoop winit.EventLoop

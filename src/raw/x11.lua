@@ -110,6 +110,29 @@ local cursors = {
 	hand2 = x11.Icon.Hand2,
 }
 
+---@param mode winit.CursorGrab
+function X11Window:setCursorGrab(mode)
+	if mode == "locked" then
+		x11.grabPointer(
+			self.display,
+			self.id,
+			x11.True,
+			bit.bor(
+				x11.EventMaskBits.PointerMotion,
+				x11.EventMaskBits.ButtonPress,
+				x11.EventMaskBits.ButtonRelease
+			),
+			x11.GrabMode.Async,
+			x11.GrabMode.Async,
+			self.id,
+			0,
+			0 -- CurrentTime
+		)
+	elseif mode == "none" then
+		x11.ungrabPointer(self.display, 0)
+	end
+end
+
 ---@param shape "pointer" | "hand2"
 function X11Window:setCursor(shape)
 	if self.currentCursor then
