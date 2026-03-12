@@ -5,7 +5,7 @@ local windowBackend =
 	or ffi.os == "Linux" and require("winit.raw.x11")
 	or error("Unsupported platform: " .. ffi.os)
 
----@alias winit.CursorGrab "locked" | "none"
+---@alias winit.CursorGrab "locked" | "contain" | "none"
 
 ---@class winit.Window
 ---@field id any?

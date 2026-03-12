@@ -3,6 +3,8 @@ local x11 = require("x11api")
 ---@class winit.x11.Window: winit.Window
 ---@field display x11.ffi.Display
 ---@field currentCursor number?
+---@field blankCursor number?
+---@field cursorGrab winit.CursorGrab?
 local X11Window = {}
 X11Window.__index = X11Window
 
@@ -110,27 +112,39 @@ local cursors = {
 	hand2 = x11.Icon.Hand2,
 }
 
+---@return number
+function X11Window:getOrCreateBlankCursor()
+	if not self.blankCursor then
+		local pixmap = x11.createPixmap(self.display, self.id, 1, 1, 1)
+		local color = x11.Color()
+		self.blankCursor = x11.createPixmapCursor(self.display, pixmap, pixmap, color, color, 0, 0)
+		x11.freePixmap(self.display, pixmap)
+	end
+	return self.blankCursor
+end
+
 ---@param mode winit.CursorGrab
 function X11Window:setCursorGrab(mode)
-	if mode == "locked" then
-		x11.grabPointer(
-			self.display,
-			self.id,
-			x11.True,
-			bit.bor(
-				x11.EventMaskBits.PointerMotion,
-				x11.EventMaskBits.ButtonPress,
-				x11.EventMaskBits.ButtonRelease
-			),
-			x11.GrabMode.Async,
-			x11.GrabMode.Async,
-			self.id,
-			0,
-			0 -- CurrentTime
-		)
+	local eventMask = bit.bor(
+		x11.EventMaskBits.PointerMotion,
+		x11.EventMaskBits.ButtonPress,
+		x11.EventMaskBits.ButtonRelease
+	)
+
+	if mode == "contain" then
+		x11.grabPointer(self.display, self.id, x11.True, eventMask,
+			x11.GrabMode.Async, x11.GrabMode.Async, self.id, 0, 0)
+	elseif mode == "locked" then
+		local blank = self:getOrCreateBlankCursor()
+		x11.grabPointer(self.display, self.id, x11.True, eventMask,
+			x11.GrabMode.Async, x11.GrabMode.Async, self.id, blank, 0)
+		x11.warpPointer(self.display, 0, self.id, 0, 0, 0, 0,
+			math.floor(self.width / 2), math.floor(self.height / 2))
 	elseif mode == "none" then
 		x11.ungrabPointer(self.display, 0)
 	end
+
+	self.cursorGrab = mode
 end
 
 ---@param shape "pointer" | "hand2"
@@ -162,6 +176,9 @@ end
 function X11Window:destroy()
 	if self.currentCursor then
 		x11.freeCursor(self.display, self.currentCursor)
+	end
+	if self.blankCursor then
+		x11.freeCursor(self.display, self.blankCursor)
 	end
 
 	x11.destroyWindow(self.display, self.id)
@@ -226,6 +243,10 @@ function X11EventLoop:run(callback)
 	local Handlers = {
 		[x11.EventType.MotionNotify] = function(window)
 			callback({ window = window, name = "mouseMove", x = event.xmotion.x, y = event.xmotion.y }, handler)
+			if window.cursorGrab == "locked" then
+				x11.warpPointer(display, 0, window.id, 0, 0, 0, 0,
+					math.floor(window.width / 2), math.floor(window.height / 2))
+			end
 		end,
 
 		[x11.EventType.ClientMessage] = function(window)
